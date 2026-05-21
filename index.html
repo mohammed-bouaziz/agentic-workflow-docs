@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context Envelopes — B2B Lead Enrichment Workflow</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: #f7f6f3;
+    color: #1a1a18;
+    padding: 32px 24px 48px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .header {
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e0da;
+  }
+  .header-eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #888780;
+    margin-bottom: 6px;
+  }
+  .header-title {
+    font-size: 20px;
+    font-weight: 500;
+    color: #1a1a18;
+    margin-bottom: 4px;
+  }
+  .header-sub {
+    font-size: 13px;
+    color: #6b6a65;
+  }
+
+  .agent-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+  .nav-btn {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    padding: 5px 13px;
+    border-radius: 20px;
+    border: 1px solid #d8d6d0;
+    background: #fff;
+    color: #6b6a65;
+    cursor: pointer;
+    transition: all .15s;
+    font-weight: 400;
+  }
+  .nav-btn:hover { border-color: #aaa89f; color: #1a1a18; }
+  .nav-btn.active {
+    background: #1a1a18;
+    border-color: #1a1a18;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .agent-block { display: none; }
+  .agent-block.visible { display: block; }
+
+  .agent-header { margin-bottom: 16px; }
+  .agent-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1a1a18;
+    margin-bottom: 3px;
+  }
+  .agent-meta { font-size: 12px; color: #888780; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .envelope-card {
+    background: #fff;
+    border: 1px solid #e2e0da;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .env-header {
+    padding: 9px 14px;
+    border-bottom: 1px solid #e2e0da;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #faf9f7;
+  }
+  .env-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #888780;
+  }
+  .env-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .tag-payload { background: #e1f5ee; color: #0f6e56; }
+  .tag-system  { background: #eeedfe; color: #3c3489; }
+
+  .json-block {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.75;
+    padding: 14px 16px;
+    color: #1a1a18;
+    white-space: pre;
+    overflow-x: auto;
+    background: #fff;
+  }
+  .k  { color: #185fa5; }
+  .v  { color: #3b6d11; }
+  .s  { color: #854f0b; }
+  .c  { color: #888780; font-style: italic; }
+  .n  { color: #3b6d11; }
+
+  .why-section {
+    background: #fff;
+    border: 1px solid #e2e0da;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .why-header {
+    padding: 9px 14px;
+    border-bottom: 1px solid #e2e0da;
+    background: #faf9f7;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #888780;
+  }
+  .why-body { padding: 4px 0; }
+  .why-item {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 0;
+    border-bottom: 1px solid #f0efe9;
+    padding: 10px 16px;
+    align-items: start;
+  }
+  .why-item:last-child { border-bottom: none; }
+  .why-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #1a1a18;
+    padding-top: 1px;
+    letter-spacing: .02em;
+  }
+  .why-text {
+    font-size: 12px;
+    color: #6b6a65;
+    line-height: 1.55;
+  }
+
+  @media (max-width: 640px) {
+    .two-col { grid-template-columns: 1fr; }
+    .why-item { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-eyebrow">Phase 4 — Input specification</div>
+  <div class="header-title">Context envelopes</div>
+  <div class="header-sub">B2B lead enrichment and outreach workflow — 6 agents</div>
+</div>
+
+<div class="agent-nav">
+  <button class="nav-btn active" onclick="show('extractor', this)">1. Domain extractor</button>
+  <button class="nav-btn" onclick="show('enrichment', this)">2. Enrichment fetcher</button>
+  <button class="nav-btn" onclick="show('research', this)">3. Research fetcher</button>
+  <button class="nav-btn" onclick="show('scoring', this)">4. Scoring agent</button>
+  <button class="nav-btn" onclick="show('outreach', this)">5. Outreach drafter</button>
+  <button class="nav-btn" onclick="show('crm', this)">6. CRM writer</button>
+</div>
+
+<div id="extractor" class="agent-block visible">
+  <div class="agent-header">
+    <div class="agent-title">Domain extractor</div>
+    <div class="agent-meta">Step 0 — runs first, unblocked. Fast, cheap, deterministic.</div>
+  </div>
+  <div class="two-col">
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">Payload (varies per call)</span><span class="env-tag tag-payload">Runtime</span></div>
+      <div class="json-block"><span class="k">{</span>
+  <span class="k">"task"</span>: <span class="k">{</span>
+    <span class="k">"action"</span>: <span class="s">"extract_domain"</span>,
+    <span class="k">"email"</span>: <span class="s">"james@uk.acmecorp.com"</span>,
+    <span class="k">"company_name_raw"</span>: <span class="s">"Acme Corp Ltd"</span>
+  <span class="k">}</span>,
+  <span class="k">"output_schema"</span>: <span class="k">{</span>
+    <span class="k">"domain"</span>: <span class="s">"string"</span>,
+    <span class="k">"confidence"</span>: <span class="s">"high|medium|low"</span>,
+    <span class="k">"normalisation_note"</span>: <span class="s">"string|null"</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+    </div>
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">System prompt (stable)</span><span class="env-tag tag-system">Fixed</span></div>
+      <div class="json-block"><span class="c">You extract the canonical domain
+from a raw email address.
+
+Rules:
+- Strip subdomains (uk., mail.)
+- Prefer the email domain over
+  company name when they conflict
+- Return JSON only, no prose
+- If uncertain, set confidence
+  to "low" and explain in
+  normalisation_note</span></div>
+    </div>
+  </div>
+  <div class="why-section">
+    <div class="why-header">Design decisions</div>
+    <div class="why-body">
+      <div class="why-item"><span class="why-label">Scope</span><span class="why-text">Two fields only. No ICP, no CRM record, no enrichment data — this agent does one string operation. Anything else is noise that could cause it to "help" by inferring context.</span></div>
+      <div class="why-item"><span class="why-label">Format</span><span class="why-text">The normalisation rules live in the system prompt, not the payload. They are stable across all calls. The payload carries only what changes: the raw email and name.</span></div>
+      <div class="why-item"><span class="why-label">Output schema</span><span class="why-text">Confidence and normalisation_note are explicit fields. Downstream agents that use this domain as a lookup key need to know whether to trust it or flag the lead for review.</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="enrichment" class="agent-block">
+  <div class="agent-header">
+    <div class="agent-title">Enrichment fetcher</div>
+    <div class="agent-meta">Parallel track A — runs immediately after domain extractor. Calls Clearbit / Apollo.</div>
+  </div>
+  <div class="two-col">
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">Payload (varies per call)</span><span class="env-tag tag-payload">Runtime</span></div>
+      <div class="json-block"><span class="k">{</span>
+  <span class="k">"task"</span>: <span class="k">{</span>
+    <span class="k">"action"</span>: <span class="s">"fetch_firmographics"</span>,
+    <span class="k">"domain"</span>: <span class="s">"acmecorp.com"</span>,
+    <span class="k">"company_name"</span>: <span class="s">"Acme Corp"</span>
+  <span class="k">}</span>,
+  <span class="k">"scope"</span>: <span class="k">{</span>
+    <span class="k">"fields_required"</span>: <span class="v">[</span>
+      <span class="s">"industry"</span>, <span class="s">"employee_count"</span>,
+      <span class="s">"annual_revenue_usd"</span>,
+      <span class="s">"hq_country"</span>, <span class="s">"tech_stack"</span>
+    <span class="v">]</span>
+  <span class="k">}</span>,
+  <span class="k">"output_schema"</span>: <span class="k">{</span>
+    <span class="k">"industry"</span>: <span class="s">"string"</span>,
+    <span class="k">"employee_count"</span>: <span class="s">"integer"</span>,
+    <span class="k">"annual_revenue_usd"</span>: <span class="s">"integer|null"</span>,
+    <span class="k">"hq_country"</span>: <span class="s">"string"</span>,
+    <span class="k">"tech_stack"</span>: <span class="s">"string[]"</span>,
+    <span class="k">"data_confidence"</span>: <span class="s">"high|medium|low"</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+    </div>
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">System prompt (stable)</span><span class="env-tag tag-system">Fixed</span></div>
+      <div class="json-block"><span class="c">You fetch and normalise company
+firmographic data from external
+enrichment APIs.
+
+Return only the fields listed in
+fields_required. Do not infer or
+hallucinate missing values — use
+null and set data_confidence to
+"low" if a field is unavailable.
+
+Return JSON only.</span></div>
+    </div>
+  </div>
+  <div class="why-section">
+    <div class="why-header">Design decisions</div>
+    <div class="why-body">
+      <div class="why-item"><span class="why-label">Scope</span><span class="why-text">fields_required is explicit in the payload. Without it, the agent returns a full Clearbit record (40+ fields) and every downstream agent has to filter. Declaring the required fields here costs nothing and eliminates that cost everywhere else.</span></div>
+      <div class="why-item"><span class="why-label">Necessity</span><span class="why-text">No ICP definition here. The enrichment fetcher doesn't score — it fetches. Injecting ICP criteria risks biasing what it retrieves or normalises. Scoring logic belongs in the scoring agent's envelope only.</span></div>
+      <div class="why-item"><span class="why-label">Coupling</span><span class="why-text">tech_stack is fetched here alongside firmographics because it uses the same API call. Fetching it separately in a second agent would mean a second API call to the same endpoint. Combine where the source is the same.</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="research" class="agent-block">
+  <div class="agent-header">
+    <div class="agent-title">Research fetcher</div>
+    <div class="agent-meta">Parallel track B — runs simultaneously with enrichment fetcher. Searches news + LinkedIn.</div>
+  </div>
+  <div class="two-col">
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">Payload (varies per call)</span><span class="env-tag tag-payload">Runtime</span></div>
+      <div class="json-block"><span class="k">{</span>
+  <span class="k">"task"</span>: <span class="k">{</span>
+    <span class="k">"action"</span>: <span class="s">"build_research_brief"</span>,
+    <span class="k">"domain"</span>: <span class="s">"acmecorp.com"</span>,
+    <span class="k">"company_name"</span>: <span class="s">"Acme Corp"</span>,
+    <span class="k">"contact_email"</span>: <span class="s">"james@acmecorp.com"</span>
+  <span class="k">}</span>,
+  <span class="k">"scope"</span>: <span class="k">{</span>
+    <span class="k">"signals_to_find"</span>: <span class="v">[</span>
+      <span class="s">"recent_funding"</span>,
+      <span class="s">"product_launches"</span>,
+      <span class="s">"executive_changes"</span>,
+      <span class="s">"hiring_intent"</span>
+    <span class="v">]</span>,
+    <span class="k">"recency_window_days"</span>: <span class="n">90</span>
+  <span class="k">}</span>,
+  <span class="k">"output_schema"</span>: <span class="k">{</span>
+    <span class="k">"signals_found"</span>: <span class="v">[{</span>
+      <span class="k">"type"</span>: <span class="s">"string"</span>,
+      <span class="k">"summary"</span>: <span class="s">"string (max 2 sentences)"</span>,
+      <span class="k">"source_url"</span>: <span class="s">"string"</span>,
+      <span class="k">"date"</span>: <span class="s">"ISO date"</span>
+    <span class="v">}]</span>,
+    <span class="k">"contact_role"</span>: <span class="s">"string|null"</span>,
+    <span class="k">"contact_tenure_months"</span>: <span class="s">"integer|null"</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+    </div>
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">System prompt (stable)</span><span class="env-tag tag-system">Fixed</span></div>
+      <div class="json-block"><span class="c">You research companies and
+contacts using web search and
+LinkedIn. Surface only signals
+relevant to a B2B sales context.
+
+Do not editorialize or score.
+Return structured signal objects,
+each with a max 2-sentence
+summary. Ignore signals older
+than recency_window_days.
+
+Return JSON only.</span></div>
+    </div>
+  </div>
+  <div class="why-section">
+    <div class="why-header">Design decisions</div>
+    <div class="why-body">
+      <div class="why-item"><span class="why-label">Resolution</span><span class="why-text">The output is resolved signals, not raw articles. The outreach drafter receives a structured array of signal objects, not a pile of URLs. Summarisation happens here so the drafter reasons about content, not format.</span></div>
+      <div class="why-item"><span class="why-label">Scope</span><span class="why-text">signals_to_find and recency_window_days are explicit constraints in the payload. Without them, the agent surfaces everything it finds and the outreach drafter has to filter. Scope constraints are cheaper to enforce at the source.</span></div>
+      <div class="why-item"><span class="why-label">Necessity</span><span class="why-text">No ICP definition, no scoring criteria, no email templates. This agent gathers — it does not evaluate. Injecting evaluation criteria here biases what it searches for.</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="scoring" class="agent-block">
+  <div class="agent-header">
+    <div class="agent-title">Scoring agent</div>
+    <div class="agent-meta">Runs after track A completes. Does not wait for track B — score is independent of research.</div>
+  </div>
+  <div class="two-col">
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">Payload (varies per call)</span><span class="env-tag tag-payload">Runtime</span></div>
+      <div class="json-block"><span class="k">{</span>
+  <span class="k">"task"</span>: <span class="k">{</span>
+    <span class="k">"action"</span>: <span class="s">"score_lead"</span>
+  <span class="k">}</span>,
+  <span class="k">"scope"</span>: <span class="k">{</span>
+    <span class="k">"firmographics"</span>: <span class="k">{</span>
+      <span class="k">"industry"</span>: <span class="s">"SaaS"</span>,
+      <span class="k">"employee_count"</span>: <span class="n">320</span>,
+      <span class="k">"hq_country"</span>: <span class="s">"US"</span>,
+      <span class="k">"annual_revenue_usd"</span>: <span class="n">18000000</span>,
+      <span class="k">"tech_stack"</span>: <span class="v">[</span><span class="s">"Salesforce"</span>,<span class="s">"AWS"</span><span class="v">]</span>
+    <span class="k">}</span>,
+    <span class="k">"icp"</span>: <span class="k">{</span>
+      <span class="k">"target_industries"</span>: <span class="v">[</span><span class="s">"SaaS"</span>,<span class="s">"Fintech"</span><span class="v">]</span>,
+      <span class="k">"min_employees"</span>: <span class="n">50</span>,
+      <span class="k">"max_employees"</span>: <span class="n">1000</span>,
+      <span class="k">"target_geographies"</span>: <span class="v">[</span><span class="s">"US"</span>,<span class="s">"UK"</span><span class="v">]</span>,
+      <span class="k">"stack_fit_signals"</span>: <span class="v">[</span><span class="s">"Salesforce"</span>,<span class="s">"HubSpot"</span><span class="v">]</span>
+    <span class="k">}</span>,
+    <span class="k">"existing_crm_record"</span>: <span class="v">null</span>
+  <span class="k">}</span>,
+  <span class="k">"output_schema"</span>: <span class="k">{</span>
+    <span class="k">"score"</span>: <span class="s">"integer 0-100"</span>,
+    <span class="k">"tier"</span>: <span class="s">"hot|warm|cold"</span>,
+    <span class="k">"reasons"</span>: <span class="s">"string[] (max 4)"</span>,
+    <span class="k">"disqualified"</span>: <span class="s">"boolean"</span>,
+    <span class="k">"disqualification_reason"</span>: <span class="s">"string|null"</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+    </div>
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">System prompt (stable)</span><span class="env-tag tag-system">Fixed</span></div>
+      <div class="json-block"><span class="c">You score inbound leads against
+an ICP definition.
+
+Score 0-100 based on: industry
+fit, company size, geography,
+and tech stack alignment.
+
+If existing_crm_record is not
+null, set disqualified: true
+and return immediately.
+
+Return up to 4 short reasons
+explaining the score.
+
+Return JSON only, no prose.</span></div>
+    </div>
+  </div>
+  <div class="why-section">
+    <div class="why-header">Design decisions</div>
+    <div class="why-body">
+      <div class="why-item"><span class="why-label">Format</span><span class="why-text">Firmographics arrive as a pre-filtered object with exactly the fields the scorer needs — not the full Clearbit payload. The enrichment fetcher already scoped this. The scorer reasons over named signals, not a document.</span></div>
+      <div class="why-item"><span class="why-label">Timing</span><span class="why-text">existing_crm_record is passed explicitly, even when null. The system prompt handles the null case — if a known customer, skip immediately. This is the short-circuit gate that prevents all wasted downstream work.</span></div>
+      <div class="why-item"><span class="why-label">Necessity</span><span class="why-text">No research brief, no news signals, no contact LinkedIn data. Scoring is a pure function of structured firmographic signals vs ICP criteria. Unstructured text degrades score consistency across calls.</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="outreach" class="agent-block">
+  <div class="agent-header">
+    <div class="agent-title">Outreach drafter</div>
+    <div class="agent-meta">Runs after score ≥ threshold AND research brief is ready. The only agent that needs both tracks.</div>
+  </div>
+  <div class="two-col">
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">Payload (varies per call)</span><span class="env-tag tag-payload">Runtime</span></div>
+      <div class="json-block"><span class="k">{</span>
+  <span class="k">"task"</span>: <span class="k">{</span>
+    <span class="k">"action"</span>: <span class="s">"draft_outreach_email"</span>,
+    <span class="k">"to_email"</span>: <span class="s">"james@acmecorp.com"</span>,
+    <span class="k">"lead_tier"</span>: <span class="s">"hot"</span>
+  <span class="k">}</span>,
+  <span class="k">"scope"</span>: <span class="k">{</span>
+    <span class="k">"company_snapshot"</span>: <span class="k">{</span>
+      <span class="k">"name"</span>: <span class="s">"Acme Corp"</span>,
+      <span class="k">"industry"</span>: <span class="s">"SaaS"</span>,
+      <span class="k">"employee_count"</span>: <span class="n">320</span>,
+      <span class="k">"hq_country"</span>: <span class="s">"US"</span>
+    <span class="k">}</span>,
+    <span class="k">"signals"</span>: <span class="v">[{</span>
+      <span class="k">"type"</span>: <span class="s">"recent_funding"</span>,
+      <span class="k">"summary"</span>: <span class="s">"Raised $12M Series A in March"</span>
+    <span class="v">}]</span>,
+    <span class="k">"contact"</span>: <span class="k">{</span>
+      <span class="k">"role"</span>: <span class="s">"VP of Engineering"</span>,
+      <span class="k">"tenure_months"</span>: <span class="n">8</span>
+    <span class="k">}</span>,
+    <span class="k">"sender"</span>: <span class="k">{</span>
+      <span class="k">"name"</span>: <span class="s">"Sarah Chen"</span>,
+      <span class="k">"title"</span>: <span class="s">"Account Executive"</span>,
+      <span class="k">"cta"</span>: <span class="s">"book_demo"</span>
+    <span class="k">}</span>
+  <span class="k">}</span>,
+  <span class="k">"constraints"</span>: <span class="k">{</span>
+    <span class="k">"template_id"</span>: <span class="s">"growth_signal_opener"</span>,
+    <span class="k">"max_words"</span>: <span class="n">120</span>,
+    <span class="k">"personalisation_required"</span>: <span class="v">true</span>
+  <span class="k">}</span>,
+  <span class="k">"output_schema"</span>: <span class="k">{</span>
+    <span class="k">"subject"</span>: <span class="s">"string"</span>,
+    <span class="k">"body"</span>: <span class="s">"string (plain text)"</span>,
+    <span class="k">"personalisation_hook"</span>: <span class="s">"string"</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+    </div>
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">System prompt (stable)</span><span class="env-tag tag-system">Fixed</span></div>
+      <div class="json-block"><span class="c">You write cold outreach emails
+for a B2B SaaS sales team.
+
+Tone: direct, consultative,
+no hyperbole. Never mention
+the score or internal signals
+explicitly.
+
+Always open with a specific,
+genuine reason for reaching out
+drawn from the signals provided.
+
+CTA mapping:
+book_demo → propose a 20-min call
+
+Use template_id as a structural
+guide, not a script.
+
+Return JSON only.</span></div>
+    </div>
+  </div>
+  <div class="why-section">
+    <div class="why-header">Design decisions</div>
+    <div class="why-body">
+      <div class="why-item"><span class="why-label">Resolution</span><span class="why-text">signals arrives as a pre-summarised array — not raw articles, not LinkedIn HTML. Each signal has a 2-sentence summary already produced by the research fetcher. The drafter reasons about what to say, not what the signal means.</span></div>
+      <div class="why-item"><span class="why-label">Payload vs system</span><span class="why-text">Tone, the rule about not exposing scores, and CTA logic are stable across all calls — they live in the system prompt. What varies per call: company snapshot, signals, sender identity, template selection. These go in the payload.</span></div>
+      <div class="why-item"><span class="why-label">Scope</span><span class="why-text">company_snapshot is 4 fields, not the full firmographic object. The drafter needs industry for tone calibration and size for context — not revenue figures or raw tech stack arrays it will never mention.</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="crm" class="agent-block">
+  <div class="agent-header">
+    <div class="agent-title">CRM writer</div>
+    <div class="agent-meta">Runs last. A write agent — it stores final outputs, reasons about nothing.</div>
+  </div>
+  <div class="two-col">
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">Payload (varies per call)</span><span class="env-tag tag-payload">Runtime</span></div>
+      <div class="json-block"><span class="k">{</span>
+  <span class="k">"task"</span>: <span class="k">{</span>
+    <span class="k">"action"</span>: <span class="s">"write_crm_record"</span>
+  <span class="k">}</span>,
+  <span class="k">"scope"</span>: <span class="k">{</span>
+    <span class="k">"lead_email"</span>: <span class="s">"james@acmecorp.com"</span>,
+    <span class="k">"domain"</span>: <span class="s">"acmecorp.com"</span>,
+    <span class="k">"score"</span>: <span class="n">82</span>,
+    <span class="k">"tier"</span>: <span class="s">"hot"</span>,
+    <span class="k">"score_reasons"</span>: <span class="v">[</span>
+      <span class="s">"Industry match: SaaS"</span>,
+      <span class="s">"Stack fit: Salesforce"</span>,
+      <span class="s">"Size within ICP range"</span>
+    <span class="v">]</span>,
+    <span class="k">"draft_email"</span>: <span class="k">{</span>
+      <span class="k">"subject"</span>: <span class="s">"Congrats on the Series A"</span>,
+      <span class="k">"body"</span>: <span class="s">"..."</span>
+    <span class="k">}</span>,
+    <span class="k">"firmographics"</span>: <span class="k">{</span>
+      <span class="k">"industry"</span>: <span class="s">"SaaS"</span>,
+      <span class="k">"employee_count"</span>: <span class="n">320</span>,
+      <span class="k">"hq_country"</span>: <span class="s">"US"</span>
+    <span class="k">}</span>
+  <span class="k">}</span>,
+  <span class="k">"constraints"</span>: <span class="k">{</span>
+    <span class="k">"sequence_id"</span>: <span class="s">"outbound_hot_2024"</span>,
+    <span class="k">"enqueue_email"</span>: <span class="v">true</span>,
+    <span class="k">"require_human_review"</span>: <span class="v">false</span>
+  <span class="k">}</span>,
+  <span class="k">"output_schema"</span>: <span class="k">{</span>
+    <span class="k">"crm_record_id"</span>: <span class="s">"string"</span>,
+    <span class="k">"email_queued"</span>: <span class="s">"boolean"</span>,
+    <span class="k">"queue_position"</span>: <span class="s">"integer"</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+    </div>
+    <div class="envelope-card">
+      <div class="env-header"><span class="env-title">System prompt (stable)</span><span class="env-tag tag-system">Fixed</span></div>
+      <div class="json-block"><span class="c">You write structured records to
+the CRM and enqueue emails in
+the outreach sequence.
+
+You do not evaluate, summarise,
+or rewrite any inputs. Map fields
+directly to CRM schema.
+
+If enqueue_email is true, add
+draft_email to sequence_id.
+If require_human_review is true,
+flag the record instead.
+
+Return JSON only.</span></div>
+    </div>
+  </div>
+  <div class="why-section">
+    <div class="why-header">Design decisions</div>
+    <div class="why-body">
+      <div class="why-item"><span class="why-label">Necessity</span><span class="why-text">No research brief, no raw signals, no ICP definition, no sender persona. The CRM writer stores final outputs. It maps fields to schema. Every field in scope is a field it will write — nothing more.</span></div>
+      <div class="why-item"><span class="why-label">Coupling</span><span class="why-text">firmographics is included as a minimal 3-field snapshot because the CRM record needs it for lead enrichment fields. This is the same scoped subset passed to the outreach drafter — not the full Clearbit payload.</span></div>
+      <div class="why-item"><span class="why-label">Payload vs system</span><span class="why-text">enqueue_email and require_human_review are in the payload because they can vary per run configuration. The rules for what those flags mean are in the system prompt — stable logic, variable inputs.</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function show(id, btn) {
+    document.querySelectorAll('.agent-block').forEach(b => b.classList.remove('visible'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('visible');
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>
